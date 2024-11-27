@@ -1,0 +1,564 @@
+import 'dart:convert'; //for json encode
+import 'package:_crudapp/firebase_options.dart';
+import 'package:_crudapp/firebase_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+//import 'package:http/http.dart' as http; //for http post
+import 'package:googleapis_auth/auth_io.dart' as auth; //for Google API auth
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        // This is the theme of your application.
+        //
+        // TRY THIS: Try running your application with "flutter run". You'll see
+        // the application has a purple toolbar. Then, without quitting the app,
+        // try changing the seedColor in the colorScheme below to Colors.green
+        // and then invoke "hot reload" (save your changes or press the "hot
+        // reload" button in a Flutter-supported IDE, or press "r" if you used
+        // the command line to start the app).
+        //
+        // Notice that the counter didn't reset back to zero; the application
+        // state is not lost during the reload. To reset the state, use hot
+        // restart instead.
+        //
+        // This works for code too, not just values: Most code changes can be
+        // tested with just a hot reload.
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const MyHomePage(title: 'Flutter Home Page'),
+    );
+  }
+}
+
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+
+  // This widget is the home page of your application. It is stateful, meaning
+  // that it has a State object (defined below) that contains fields that affect
+  // how it looks.
+
+  // This class is the configuration for the state. It holds the values (in this
+  // case the title) provided by the parent (in this case the App widget) and
+  // used by the build method of the State. Fields in a Widget subclass are
+  // always marked "final".
+
+  final String title;
+
+  @override
+  State<MyHomePage> createState() => _MyHomePageState();
+}
+
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
+  String _token = 'Fetching token...';
+  String _message = 'Waiting for message';
+  String _notificationTitle = '';
+  String _notificationBody = '';
+  String? selectedItem;
+  String _selectedToken = '';
+  List<Map<String, dynamic>> items = [];
+  bool isLoading = true;
+
+    @override
+    void initState() {
+      super.initState();
+      _getFirebaseMessagingToken();
+      // Initialize Firebase Messaging
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      // Request permission for push notifications
+      messaging.requestPermission();
+      _configureFCMListeners();
+      fetchData();
+    }
+
+  // This method is called to get the Firebase token
+  Future<void> _getFirebaseMessagingToken() async {
+    try {
+      String? token = await FirebaseMessaging.instance.getToken();
+      setState(() {
+        _token = token ?? 'Failed to get token';
+      });
+      print("FCM Token: $_token");
+      // You can send this token to your server for push notifications
+    } catch (e) {
+      //print("Error getting token: $e");
+      setState(() {
+        _token = 'Error fetching token: $e';
+      });
+    }
+  }
+
+  Future<void> _configureFCMListeners() async {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // Handle incoming data message when the app is in the foreground
+      setState(() {
+        _notificationTitle = message.notification?.title ?? 'No Title';
+        _notificationBody = message.notification?.body ?? 'No Body';
+        _message = 'Data message received: ${message.data}\nMessage title: ${_notificationTitle}\nMessage title: ${_notificationBody}';
+      });
+      print('Handling background message title: ${message.notification?.title}');
+      print('Handling background message body: ${message.notification?.body}');
+      print("Data message received: ${message.data}\n Message title: ${_notificationTitle}\n Message title: ${_notificationBody}");
+      // Extract data and perform custom actions
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      // Handle incoming data message when the app is in the background or terminated
+      setState(() {
+        _message = 'Data message opened: ${message.data}';
+      });
+      //print("Data message opened: ${message.data}");
+      // Extract data and perform custom actions
+    });
+  }
+
+  void _incrementCounter() {
+    setState(() {
+      // This call to setState tells the Flutter framework that something has
+      // changed in this State, which causes it to rerun the build method below
+      // so that the display can reflect the updated values. If we changed
+      // _counter without calling setState(), then the build method would not be
+      // called again, and so nothing would appear to happen.
+      _counter++;
+    });
+  }
+
+  TextEditingController controller = TextEditingController();
+  FirestoreServices firestoreServices = FirestoreServices();
+
+  void showUserCreateBox(String? textToedit, String? docId, Timestamp? time) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        if (textToedit != null) {
+          controller.text = textToedit;
+        }
+        return AlertDialog(
+          title: Text(
+            "Add user",
+            style: GoogleFonts.alexandria(fontSize: 16),
+          ),
+          content: Column(
+            children: <Widget>[
+              TextField(
+                decoration: InputDecoration(hintText: 'Username here...'),
+                style: GoogleFonts.alexandria(),
+                controller: controller,
+              ),
+              SizedBox(height: 10), // Add space between text and TextField
+              Text(
+                _token,
+                style: GoogleFonts.alexandria(),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                if (docId == null) {
+                  firestoreServices.addToken(controller.text, _token);
+                } else {
+                  firestoreServices.updateToken(docId, controller.text, _token, time!);
+                }
+                controller.clear();
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Add',
+                style: GoogleFonts.alexandria(),
+              ),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  // Fetch data from Firestore using the FirebaseServices class
+  Future<void> fetchData() async {
+    //List<String>? fetchedItems = await firestoreServices.fetchItems();
+    List<Map<String, dynamic>>? fetchedItems = await firestoreServices.fetchItems();
+    setState(() {
+      items = fetchedItems;
+      //if (items.isNotEmpty) {
+      //  selectedItem = items[0] as String?; // Set the first item as default selection
+      //}
+      isLoading = false; // Update loading state
+    });
+  }
+
+  // Controllers for the text fields
+  TextEditingController titleController = TextEditingController();
+  TextEditingController bodyController = TextEditingController();
+
+  //dropdown selected value is only changed when cover alertdialog with statefulbuilder
+  void showMessageBox(String? textToedit, String? docId, Timestamp? time) {
+    // Fetch the users data when the dialog is opened
+    fetchData();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) =>
+          AlertDialog(
+            title: Text(
+              "Select a user",
+              style: GoogleFonts.alexandria(fontSize: 16),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min, // Prevents the content from stretching too much
+              children: <Widget>[
+                isLoading
+                ? CircularProgressIndicator() // Show loading while fetching data
+                : DropdownButton<String>(
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedItem = newValue; // Update the selected value
+                        var selectedUser = items.firstWhere(
+                            (item) => item['username'] == newValue); // Fetch other fields when a user is selected
+                        _selectedToken = selectedUser['token'] ?? '';
+                      });
+                      print('newValue is $newValue');
+                    },
+                    value: selectedItem,
+                    //items: items.map<DropdownMenuItem<String>>((String value) {
+                    items: items.map<DropdownMenuItem<String>>((item) {
+                      return DropdownMenuItem<String>(
+                        //value: value,
+                        //child: Text(value),
+                        value: item['username'],
+                        child: Text(item['username']),
+                      );
+                    }).toList(),
+                  ),
+                SizedBox(height: 10), // Add space between text and TextField
+                Text(
+                  _selectedToken,
+                  style: GoogleFonts.alexandria(),
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  decoration: InputDecoration(hintText: 'Title here...'),
+                  style: GoogleFonts.alexandria(),
+                  controller: titleController,
+                ),
+                SizedBox(height: 10),
+                TextField(
+                  decoration: InputDecoration(hintText: 'Body here...'),
+                  style: GoogleFonts.alexandria(),
+                  controller: bodyController,
+                ),
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  String title = titleController.text;
+                  String body = bodyController.text;
+
+                  if (title.isNotEmpty && body.isNotEmpty) {
+                    sendNotification(title, body, _selectedToken);
+                  } else {
+                    // Show error if fields are empty
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: Text("Error"),
+                          content: Text("Please fill out both fields."),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Text("OK"),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }
+                  controller.clear();
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Send Message',
+                  style: GoogleFonts.alexandria(),
+                ),
+              )
+            ],
+          )
+        );
+      },
+    );
+  }
+
+  // Send notification function Firebase Cloud Messaging API HTTP V1
+  void sendNotification(String title, String body, String token) async {
+
+    final jsonCredentials = await rootBundle
+        .loadString('data/flutapp-eafa6-3193408a53f1.json');
+    final creds = auth.ServiceAccountCredentials.fromJson(jsonCredentials);
+    final client = await auth.clientViaServiceAccount(
+      creds,
+      ['https://www.googleapis.com/auth/cloud-platform'],
+    );
+
+    final notificationData = {
+      'message': {
+        'token': token,
+        'notification': {'title': title, 'body': body}
+      },
+    };
+
+    // Firebase notification payload
+    //Map<String, dynamic> notification = {
+      //'to': '/topics/your_topic',  // Send to a topic or use a device token
+      //'to': token,
+      //'notification': {
+      //  'title': title,
+      //  'body': body,
+      //},
+      //'data': {
+      //  'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+      //  'id': '1',
+      //  'status': 'done',
+      //},
+    //};
+
+    // Sending notification via HTTP POST request to Firebase Cloud Messaging API
+    try {
+
+      //final response = await http.post(
+      //  //Uri.parse('https://fcm.googleapis.com/fcm/send'),
+      //  Uri.parse('https://fcm.googleapis.com/v1/projects/flutapp-eafa6/messages:send'),
+      //  headers: <String, String>{
+      //    'Content-Type': 'application/json',
+      //    //'Authorization': 'key=YOUR_SERVER_KEY',  // Replace with your Firebase server key
+      //  },
+      //  body: json.encode(notification),
+      //);
+
+      const String senderId = '620340816204';
+      final response = await client.post(
+        Uri.parse('https://fcm.googleapis.com/v1/projects/$senderId/messages:send'),
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: jsonEncode(notificationData),
+      );
+      
+      client.close();
+
+      if (response.statusCode == 200) {
+        print("Notification sent successfully");
+      } else {
+        print("Failed to send notification: ${response.statusCode}");
+      }
+
+    } catch (e) {
+      print("Error sending notification: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // This method is rerun every time setState is called, for instance as done
+    // by the _incrementCounter method above.
+    //
+    // The Flutter framework has been optimized to make rerunning build methods
+    // fast, so that you can just rebuild anything that needs updating rather
+    // than having to individually change instances of widgets.
+    return Scaffold(
+      appBar: AppBar(
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
+      ),
+      body: SingleChildScrollView( // Ensure the entire body is scrollable
+        child: Column(
+          children: <Widget>[ 
+            Center(
+              // Center is a layout widget. It takes a single child and positions it
+              // in the middle of the parent.
+              child: Column(
+                // Column is also a layout widget. It takes a list of children and
+                // arranges them vertically. By default, it sizes itself to fit its
+                // children horizontally, and tries to be as tall as its parent.
+                //
+                // Column has various properties to control how it sizes itself and
+                // how it positions its children. Here we use mainAxisAlignment to
+                // center the children vertically; the main axis here is the vertical
+                // axis because Columns are vertical (the cross axis would be
+                // horizontal).
+                //
+                // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+                // action in the IDE, or press "p" in the console), to see the
+                // wireframe for each widget.
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const Text(
+                    '1. You have pushed the button this many times:',
+                  ),
+                  Text(
+                    '$_counter',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const Text(
+                    '2. Firebase Token:',
+                  ),
+                  Text(
+                    _token,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const Text(
+                    '3. Message Received:',
+                  ),
+                  Text(
+                    _message,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20), // Adds space between the widgets
+            StreamBuilder(
+              stream: FirestoreServices().showTokens(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  List noteList = snapshot.data!.docs;
+                  return ListView.builder(
+                    shrinkWrap: true, // Make ListView take only the necessary space
+                    itemCount: noteList.length,
+                    itemBuilder: (context, index) {
+                      DocumentSnapshot document = noteList[index];
+                      String docId = document.id;
+                      Map<String, dynamic> data =
+                          document.data() as Map<String, dynamic>;
+                      String username = data['username'];
+                      Timestamp time = data['timestamp'];
+                      return Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.all(16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              tileColor: Colors.purple[100],
+                              title: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  username,
+                                  style: GoogleFonts.alexandria(
+                                      textStyle: TextStyle(
+                                          color: Colors.purple[800], fontSize: 19)),
+                                ),
+                              ),
+                              trailing: Column(
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        color: Colors.purple[400],
+                                        icon: Icon(Icons.edit),
+                                        onPressed: () {
+                                          showUserCreateBox(username, docId, time);
+                                        },
+                                      ),
+                                      IconButton(
+                                          color: Colors.purple[400],
+                                          onPressed: () {
+                                            firestoreServices.deleteToken(docId);
+                                          },
+                                          icon: Icon(Icons.delete))
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  time.toDate().hour.toString().padLeft(2, '0'),
+                                  style: const TextStyle(
+                                      color: Colors.purple,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                Text(":"),
+                                Text(
+                                  time.toDate().minute.toString().padLeft(2, '0'),
+                                  style: const TextStyle(
+                                      color: Colors.purple,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          )
+                        ],
+                      );
+                    },
+                  );
+                } else {
+                  return Center(
+                    child: Text("Nothing to show...add tokens"),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: Row(
+        children: <Widget>[ 
+          SizedBox(width: 30), // Space between buttons
+          FloatingActionButton(
+            onPressed: _incrementCounter,
+            tooltip: 'Increment',
+            child: const Icon(Icons.add),
+          ),
+          SizedBox(width: 20), // Space between buttons
+          FloatingActionButton(
+            onPressed: () async { showUserCreateBox(null, null, null); },
+            tooltip: 'Create User',
+            child: const Icon(Icons.add),
+          ),
+          SizedBox(width: 20), // Space between buttons
+          FloatingActionButton(
+            onPressed: () async { showMessageBox(null, null, null); },
+            tooltip: 'Create Message',
+            child: const Icon(Icons.add),
+          ),
+        ],
+       ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}

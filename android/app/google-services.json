@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "620340816204",
+    "project_id": "flutapp-eafa6",
+    "storage_bucket": "flutapp-eafa6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:620340816204:android:830f361b29dc202ea0c7e9",
+        "android_client_info": {
+          "package_name": "com.flutapp.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4ez_pOT7C0rf9zA_jecXrfEIcteWV2v4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
