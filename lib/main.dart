@@ -79,6 +79,7 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isLoading = true;
   bool _customTileExpanded = false;
   bool _customTileExpanded2 = false;
+  int _notificationCount = 0;
 
     @override
     void initState() {
@@ -116,6 +117,7 @@ class _MyHomePageState extends State<MyHomePage> {
         _notificationTitle = message.notification?.title ?? 'No Title';
         _notificationBody = message.notification?.body ?? 'No Body';
         _message = 'Data message received: ${message.data}\nMessage title: ${_notificationTitle}\nMessage title: ${_notificationBody}';
+        _notificationCount++;
       });
       print('Handling background message title: ${message.notification?.title}');
       print('Handling background message body: ${message.notification?.body}');
@@ -148,15 +150,20 @@ class _MyHomePageState extends State<MyHomePage> {
   FirestoreServices firestoreServices = FirestoreServices();
 
   void showUserCreateBox(String? textToedit, String? docId, Timestamp? time) {
+    String uMode = '';
     showDialog(
       context: context,
       builder: (context) {
         if (textToedit != null) {
           controller.text = textToedit;
+          uMode = 'Edit';
+        }else{
+          uMode = 'Add';
         }
+
         return AlertDialog(
           title: Text(
-            "Add user",
+            "$uMode user",
             style: GoogleFonts.alexandria(fontSize: 16),
           ),
           content: Column(
@@ -185,7 +192,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Navigator.pop(context);
               },
               child: Text(
-                'Add',
+                uMode,
                 style: GoogleFonts.alexandria(),
               ),
             )
@@ -399,6 +406,47 @@ class _MyHomePageState extends State<MyHomePage> {
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: Icon(Icons.notifications),
+                onPressed: () {
+                  // Handle notification icon press
+                  print("Notification icon tapped");
+                  setState(() {
+                    _notificationCount--;
+                  });
+                },
+              ),
+              if (_notificationCount > 0)
+                Positioned(
+                  right: 5,
+                  top: 3,
+                  child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '$_notificationCount',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: SingleChildScrollView( // Ensure the entire body is scrollable
         child: Column(
