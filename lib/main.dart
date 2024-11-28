@@ -79,7 +79,10 @@ class _MyHomePageState extends State<MyHomePage> {
   bool isLoading = true;
   bool _customTileExpanded = false;
   bool _customTileExpanded2 = false;
+  bool _customTileExpanded3 = false;
   int _notificationCount = 0;
+  String _currentUser = '';
+  String _textToedit = '';
 
     @override
     void initState() {
@@ -101,6 +104,11 @@ class _MyHomePageState extends State<MyHomePage> {
         _token = token ?? 'Failed to get token';
       });
       print("FCM Token: $_token");
+      String currentUser = await firestoreServices.queryUsername(_token);
+      setState(() {
+        _currentUser = currentUser;
+      });
+      print('Fetching token: Your username is $currentUser'); 
       // You can send this token to your server for push notifications
     } catch (e) {
       //print("Error getting token: $e");
@@ -111,25 +119,39 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _configureFCMListeners() async {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
       // Handle incoming data message when the app is in the foreground
       setState(() {
         _notificationTitle = message.notification?.title ?? 'No Title';
         _notificationBody = message.notification?.body ?? 'No Body';
-        _message = 'Data message received: ${message.data}\nMessage title: ${_notificationTitle}\nMessage title: ${_notificationBody}';
+        _message = 'Data message received: ${message.data}\nMessage title: $_notificationTitle\nMessage title: $_notificationBody';
         _notificationCount++;
       });
+      String currentUser = await firestoreServices.queryUsername(_token);
+      setState(() {
+        _currentUser = currentUser;
+      });
+      firestoreServices.addMessage(currentUser, _token, _notificationTitle, _notificationBody);
+      print('Listening to Message: Your username is $currentUser'); 
       print('Handling background message title: ${message.notification?.title}');
       print('Handling background message body: ${message.notification?.body}');
-      print("Data message received: ${message.data}\n Message title: ${_notificationTitle}\n Message title: ${_notificationBody}");
+      print("Data message received: ${message.data}\n Message title: $_notificationTitle\n Message title: $_notificationBody");
       // Extract data and perform custom actions
     });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
       // Handle incoming data message when the app is in the background or terminated
       setState(() {
+        _notificationTitle = message.notification?.title ?? 'No Title';
+        _notificationBody = message.notification?.body ?? 'No Body';
         _message = 'Data message opened: ${message.data}';
+        _notificationCount++;
       });
+      String currentUser = await firestoreServices.queryUsername(_token);
+      setState(() {
+        _currentUser = currentUser;
+      });
+      firestoreServices.addMessage(currentUser, _token, _notificationTitle, _notificationBody);
       //print("Data message opened: ${message.data}");
       // Extract data and perform custom actions
     });
@@ -155,8 +177,11 @@ class _MyHomePageState extends State<MyHomePage> {
       context: context,
       builder: (context) {
         if (textToedit != null) {
+          print('textToedit is $textToedit');
+          print('showUserCreateBox: current user is $_currentUser');
           controller.text = textToedit;
           uMode = 'Edit';
+          _textToedit = textToedit;
         }else{
           uMode = 'Add';
         }
@@ -169,11 +194,11 @@ class _MyHomePageState extends State<MyHomePage> {
           content: Column(
             children: <Widget>[
               TextField(
-                decoration: InputDecoration(hintText: 'Username here...'),
+                decoration: const InputDecoration(hintText: 'Username here...'),
                 style: GoogleFonts.alexandria(),
                 controller: controller,
               ),
-              SizedBox(height: 10), // Add space between text and TextField
+              const SizedBox(height: 10), // Add space between text and TextField
               Text(
                 _token,
                 style: GoogleFonts.alexandria(),
@@ -187,6 +212,8 @@ class _MyHomePageState extends State<MyHomePage> {
                   firestoreServices.addToken(controller.text, _token);
                 } else {
                   firestoreServices.updateToken(docId, controller.text, _token, time!);
+                  _currentUser = _textToedit;
+                  print('showUserCreateBox updateToken: current user is $_currentUser');
                 }
                 controller.clear();
                 Navigator.pop(context);
@@ -237,7 +264,7 @@ class _MyHomePageState extends State<MyHomePage> {
               //mainAxisSize: MainAxisSize.min, // Prevents the content from stretching too much
               children: <Widget>[
                 isLoading
-                ? CircularProgressIndicator() // Show loading while fetching data
+                ? const CircularProgressIndicator() // Show loading while fetching data
                 : DropdownButton<String>(
                     onChanged: (String? newValue) {
                       setState(() {
@@ -259,20 +286,20 @@ class _MyHomePageState extends State<MyHomePage> {
                       );
                     }).toList(),
                   ),
-                SizedBox(height: 10), // Add space between text and TextField
+                const SizedBox(height: 10), // Add space between text and TextField
                 Text(
                   _selectedToken,
                   style: GoogleFonts.alexandria(),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextField(
-                  decoration: InputDecoration(hintText: 'Title here...'),
+                  decoration: const InputDecoration(hintText: 'Title here...'),
                   style: GoogleFonts.alexandria(),
                   controller: titleController,
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 TextField(
-                  decoration: InputDecoration(hintText: 'Body here...'),
+                  decoration: const InputDecoration(hintText: 'Body here...'),
                   style: GoogleFonts.alexandria(),
                   controller: bodyController,
                 ),
@@ -292,14 +319,14 @@ class _MyHomePageState extends State<MyHomePage> {
                       context: context,
                       builder: (BuildContext context) {
                         return AlertDialog(
-                          title: Text("Error"),
-                          content: Text("Please fill out both fields."),
+                          title: const Text("Error"),
+                          content: const Text("Please fill out both fields."),
                           actions: <Widget>[
                             TextButton(
                               onPressed: () {
                                 Navigator.pop(context);
                               },
-                              child: Text("OK"),
+                              child: const Text("OK"),
                             ),
                           ],
                         );
@@ -411,7 +438,7 @@ class _MyHomePageState extends State<MyHomePage> {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: Icon(Icons.notifications),
+                icon: const Icon(Icons.notifications),
                 onPressed: () {
                   // Handle notification icon press
                   print("Notification icon tapped");
@@ -425,18 +452,18 @@ class _MyHomePageState extends State<MyHomePage> {
                   right: 5,
                   top: 3,
                   child: Container(
-                    padding: EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: Colors.red,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    constraints: BoxConstraints(
+                    constraints: const BoxConstraints(
                       minWidth: 16,
                       minHeight: 16,
                     ),
                     child: Text(
                       '$_notificationCount',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
                       ),
@@ -509,7 +536,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ],
               ),
             ),
-            SizedBox(height: 20), // Adds space between the widgets
+            const SizedBox(height: 20), // Adds space between the widgets
             ExpansionTile(
               title: const Text('User List'),
               trailing: Icon(
@@ -543,7 +570,7 @@ class _MyHomePageState extends State<MyHomePage> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 14),
                                 child: ListTile(
-                                  contentPadding: EdgeInsets.all(16),
+                                  contentPadding: const EdgeInsets.all(16),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                   tileColor: Colors.purple[100],
                                   title: Padding(
@@ -562,7 +589,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         children: [
                                           IconButton(
                                             color: Colors.purple[400],
-                                            icon: Icon(Icons.edit),
+                                            icon: const Icon(Icons.edit),
                                             onPressed: () {
                                               showUserCreateBox(username, docId, time);
                                             },
@@ -572,7 +599,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                               onPressed: () {
                                                 firestoreServices.deleteToken(docId);
                                               },
-                                              icon: Icon(Icons.delete))
+                                              icon: const Icon(Icons.delete))
                                         ],
                                       ),
                                     ],
@@ -591,7 +618,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                           color: Colors.purple,
                                           fontWeight: FontWeight.bold),
                                     ),
-                                    Text(":"),
+                                    const Text(":"),
                                     Text(
                                       time.toDate().minute.toString().padLeft(2, '0'),
                                       style: const TextStyle(
@@ -606,8 +633,107 @@ class _MyHomePageState extends State<MyHomePage> {
                         },
                       );
                     } else {
-                      return Center(
+                      return const Center(
                         child: Text("Nothing to show...add tokens"),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20), // Adds space between the widgets
+            ExpansionTile(
+              title: const Text('User Message List'),
+              trailing: Icon(
+                _customTileExpanded3
+                    ? Icons.arrow_drop_down_circle
+                    : Icons.arrow_drop_down,
+              ),
+              onExpansionChanged: (bool expanded) {
+                //String currentUser = await firestoreServices.queryUsername(_token);
+                //print('My username is $currentUser');
+                setState(() {
+                  _customTileExpanded3 = expanded;
+                  //_currentUser = currentUser;
+                });
+              },
+              children: <Widget>[
+                StreamBuilder(
+                  stream: FirestoreServices().showMessages(_currentUser),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      print("Error: ${snapshot.error}");
+                      //return Center(child: Text("Error: ${snapshot.error}"));
+                    }
+                    
+                    if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                      List noteList = snapshot.data!.docs;
+                      int msgctr = noteList.length;
+                      print('message counters:  $msgctr');
+                      return ListView.builder(
+                        shrinkWrap: true, // Make ListView take only the necessary space
+                        itemCount: noteList.length,
+                        itemBuilder: (context, index) {
+                          DocumentSnapshot document = noteList[index];
+                          //String docId = document.id;
+                          Map<String, dynamic> data =
+                              document.data() as Map<String, dynamic>;
+                          String msgtitle = data['msgtitle'];
+                          String msgbody = data['msgbody'];
+                          String fullmsg = 'Title: $msgtitle\nBody: $msgbody';
+                          Timestamp time = data['timestamp'];
+                          return Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.all(16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  tileColor: Colors.purple[100],
+                                  title: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      fullmsg,
+                                      style: GoogleFonts.alexandria(
+                                          textStyle: TextStyle(
+                                              color: Colors.purple[800], fontSize: 19)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      time.toDate().hour.toString().padLeft(2, '0'),
+                                      style: const TextStyle(
+                                          color: Colors.purple,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    const Text(":"),
+                                    Text(
+                                      time.toDate().minute.toString().padLeft(2, '0'),
+                                      style: const TextStyle(
+                                          color: Colors.purple,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            ],
+                          );
+                        },
+                      );
+                    } else {
+                      return const Center(
+                        child: Text("Nothing to show...add messages"),
                       );
                     }
                   },
@@ -636,13 +762,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 tooltip: 'Increment',
                 child: const Icon(Icons.add),
               ),
-              SizedBox(width: 20), // Space between buttons
+              const SizedBox(width: 20), // Space between buttons
               FloatingActionButton(
                 onPressed: () async { showUserCreateBox(null, null, null); },
                 tooltip: 'Create User',
                 child: const Icon(Icons.add),
               ),
-              SizedBox(width: 20), // Space between buttons
+              const SizedBox(width: 20), // Space between buttons
               FloatingActionButton(
                 onPressed: () async { showMessageBox(null, null, null); },
                 tooltip: 'Create Message',

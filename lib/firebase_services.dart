@@ -6,6 +6,21 @@ class FirestoreServices {
   final CollectionReference? usertokens =
       FirebaseFirestore.instance.collection('usertokens');
 
+  // creating a collection named 'usermsgs' under which
+  // all the received messages will be stored. 
+  final CollectionReference? usermsgs =
+      FirebaseFirestore.instance.collection('usermsgs');
+
+  // adding a new note logic within our 'usertokens' collection 
+  // by creating 2 fields named
+  // 'token' (token we enter) and 'timestamp'(time of entry)
+  
+  Future<void> addMessage(String username, String token, String msgtitle, String msgbody) {
+    return usermsgs!.add(
+      {'username': username,'token': token, 'msgtitle': msgtitle, 'msgbody': msgbody, 'timestamp': Timestamp.now()},
+    );
+  }
+
   // adding a new note logic within our 'usertokens' collection 
   // by creating 2 fields named
   // 'token' (token we enter) and 'timestamp'(time of entry)
@@ -24,6 +39,38 @@ class FirestoreServices {
         usertokens!.orderBy('timestamp', descending: true).snapshots();
 
     return tokensStream;
+  }
+
+  Stream<QuerySnapshot> showMessages(String username) {
+    //print('query message with user name $username');
+    //final msgsStream =
+    return 
+        usermsgs!
+        .where('username', isEqualTo: username)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+
+    //return msgsStream;
+  }
+
+  Future<String> queryUsername(String token) async {
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('usertokens') // Replace 'usertokens' with your collection name
+          .where('token', isEqualTo: token) // Replace 'token' and passed token
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+          //return snapshot.docs.first.data().toString();
+          return snapshot.docs.first.get('username');
+      } else {
+          print("No records found");
+      }
+      return ""; // Return an empty value if there is an error
+    } catch (e) {
+        print("Error: $e");
+        return ""; // Return an empty value if there is an error
+    }
   }
 
   // Fetch a list of items from Firestore collection
