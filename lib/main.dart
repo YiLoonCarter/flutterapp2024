@@ -77,6 +77,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String _selectedToken = '';
   List<Map<String, dynamic>> items = [];
   bool isLoading = true;
+  bool _customTileExpanded = false;
+  bool _customTileExpanded2 = false;
 
     @override
     void initState() {
@@ -225,7 +227,7 @@ class _MyHomePageState extends State<MyHomePage> {
               style: GoogleFonts.alexandria(fontSize: 16),
             ),
             content: Column(
-              mainAxisSize: MainAxisSize.min, // Prevents the content from stretching too much
+              //mainAxisSize: MainAxisSize.min, // Prevents the content from stretching too much
               children: <Widget>[
                 isLoading
                 ? CircularProgressIndicator() // Show loading while fetching data
@@ -420,123 +422,189 @@ class _MyHomePageState extends State<MyHomePage> {
                 // wireframe for each widget.
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  const Text(
-                    '1. You have pushed the button this many times:',
-                  ),
-                  Text(
-                    '$_counter',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const Text(
-                    '2. Firebase Token:',
-                  ),
-                  Text(
-                    _token,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const Text(
-                    '3. Message Received:',
-                  ),
-                  Text(
-                    _message,
-                    style: Theme.of(context).textTheme.headlineMedium,
+                  ExpansionTile(
+                    title: const Text('User Profile'),
+                    trailing: Icon(
+                      _customTileExpanded
+                          ? Icons.arrow_drop_down_circle
+                          : Icons.arrow_drop_down,
+                    ),
+                    onExpansionChanged: (bool expanded) {
+                      setState(() {
+                        _customTileExpanded = expanded;
+                      });
+                    },
+                    children: <Widget>[
+                      const Text(
+                        '1. You have pushed the button this many times:',
+                      ),
+                      Text(
+                        '$_counter',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const Text(
+                        '2. Firebase Token:',
+                      ),
+                      Text(
+                        _token,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const Text(
+                        '3. Message Received:',
+                      ),
+                      Text(
+                        _message,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
             SizedBox(height: 20), // Adds space between the widgets
-            StreamBuilder(
-              stream: FirestoreServices().showTokens(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  List noteList = snapshot.data!.docs;
-                  return ListView.builder(
-                    shrinkWrap: true, // Make ListView take only the necessary space
-                    itemCount: noteList.length,
-                    itemBuilder: (context, index) {
-                      DocumentSnapshot document = noteList[index];
-                      String docId = document.id;
-                      Map<String, dynamic> data =
-                          document.data() as Map<String, dynamic>;
-                      String username = data['username'];
-                      Timestamp time = data['timestamp'];
-                      return Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: ListTile(
-                              contentPadding: EdgeInsets.all(16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              tileColor: Colors.purple[100],
-                              title: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  username,
-                                  style: GoogleFonts.alexandria(
-                                      textStyle: TextStyle(
-                                          color: Colors.purple[800], fontSize: 19)),
-                                ),
-                              ),
-                              trailing: Column(
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
+            ExpansionTile(
+              title: const Text('User List'),
+              trailing: Icon(
+                _customTileExpanded2
+                    ? Icons.arrow_drop_down_circle
+                    : Icons.arrow_drop_down,
+              ),
+              onExpansionChanged: (bool expanded) {
+                setState(() {
+                  _customTileExpanded2 = expanded;
+                });
+              },
+              children: <Widget>[
+                StreamBuilder(
+                  stream: FirestoreServices().showTokens(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      List noteList = snapshot.data!.docs;
+                      return ListView.builder(
+                        shrinkWrap: true, // Make ListView take only the necessary space
+                        itemCount: noteList.length,
+                        itemBuilder: (context, index) {
+                          DocumentSnapshot document = noteList[index];
+                          String docId = document.id;
+                          Map<String, dynamic> data =
+                              document.data() as Map<String, dynamic>;
+                          String username = data['username'];
+                          Timestamp time = data['timestamp'];
+                          return Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.all(16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  tileColor: Colors.purple[100],
+                                  title: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      username,
+                                      style: GoogleFonts.alexandria(
+                                          textStyle: TextStyle(
+                                              color: Colors.purple[800], fontSize: 19)),
+                                    ),
+                                  ),
+                                  trailing: Column(
                                     children: [
-                                      IconButton(
-                                        color: Colors.purple[400],
-                                        icon: Icon(Icons.edit),
-                                        onPressed: () {
-                                          showUserCreateBox(username, docId, time);
-                                        },
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            color: Colors.purple[400],
+                                            icon: Icon(Icons.edit),
+                                            onPressed: () {
+                                              showUserCreateBox(username, docId, time);
+                                            },
+                                          ),
+                                          IconButton(
+                                              color: Colors.purple[400],
+                                              onPressed: () {
+                                                firestoreServices.deleteToken(docId);
+                                              },
+                                              icon: Icon(Icons.delete))
+                                        ],
                                       ),
-                                      IconButton(
-                                          color: Colors.purple[400],
-                                          onPressed: () {
-                                            firestoreServices.deleteToken(docId);
-                                          },
-                                          icon: Icon(Icons.delete))
                                     ],
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Text(
-                                  time.toDate().hour.toString().padLeft(2, '0'),
-                                  style: const TextStyle(
-                                      color: Colors.purple,
-                                      fontWeight: FontWeight.bold),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      time.toDate().hour.toString().padLeft(2, '0'),
+                                      style: const TextStyle(
+                                          color: Colors.purple,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    Text(":"),
+                                    Text(
+                                      time.toDate().minute.toString().padLeft(2, '0'),
+                                      style: const TextStyle(
+                                          color: Colors.purple,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
                                 ),
-                                Text(":"),
-                                Text(
-                                  time.toDate().minute.toString().padLeft(2, '0'),
-                                  style: const TextStyle(
-                                      color: Colors.purple,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          )
-                        ],
+                              )
+                            ],
+                          );
+                        },
                       );
-                    },
-                  );
-                } else {
-                  return Center(
-                    child: Text("Nothing to show...add tokens"),
-                  );
-                }
-              },
+                    } else {
+                      return Center(
+                        child: Text("Nothing to show...add tokens"),
+                      );
+                    }
+                  },
+                ),
+              ],
             ),
           ],
         ),
       ),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.purple[200],
+        //shadowColor: Colors.purple,
+        //surfaceTintColor: Colors.purple,
+        child: //Padding(
+          //padding: EdgeInsets.all(16),
+          //child: Row(
+          Row(
+            //mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              //const Text("",
+              //style: TextStyle(color: Colors.transparent), // Invisible text
+              //),
+              FloatingActionButton(
+                onPressed: _incrementCounter,
+                tooltip: 'Increment',
+                child: const Icon(Icons.add),
+              ),
+              SizedBox(width: 20), // Space between buttons
+              FloatingActionButton(
+                onPressed: () async { showUserCreateBox(null, null, null); },
+                tooltip: 'Create User',
+                child: const Icon(Icons.add),
+              ),
+              SizedBox(width: 20), // Space between buttons
+              FloatingActionButton(
+                onPressed: () async { showMessageBox(null, null, null); },
+                tooltip: 'Create Message',
+                child: const Icon(Icons.add),
+              ),
+            ],
+          ),
+        //),
+      ),
+      /*
       floatingActionButton: Row(
         children: <Widget>[ 
           SizedBox(width: 30), // Space between buttons
@@ -559,6 +627,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
        ), // This trailing comma makes auto-formatting nicer for build methods.
+       */
     );
   }
 }
