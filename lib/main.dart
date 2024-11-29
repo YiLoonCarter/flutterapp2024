@@ -83,18 +83,91 @@ class _MyHomePageState extends State<MyHomePage> {
   int _notificationCount = 0;
   String _currentUser = '';
   String _textToedit = '';
+  String _docId = '';
 
-    @override
-    void initState() {
-      super.initState();
-      _getFirebaseMessagingToken();
-      // Initialize Firebase Messaging
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
-      // Request permission for push notifications
-      messaging.requestPermission();
-      _configureFCMListeners();
-      fetchData();
+  @override
+  void initState() {
+    super.initState();
+    _getFirebaseMessagingToken();
+    // Initialize Firebase Messaging
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    // Request permission for push notifications
+    messaging.requestPermission();
+    _configureFCMListeners();
+    // Show the dialog after the first frame is rendered.
+    //WidgetsBinding.instance.addPostFrameCallback((_) {
+    //  showWelcomeBox();
+    //});
+    fetchData();
+  }
+
+  Future<void> _loadDocData() async {
+    try {
+      final documentData = await firestoreServices.fetchTokenDocument(_token);
+
+      setState(() {
+        _docId = documentData['docId']; // Set the document ID
+        _currentUser =
+            documentData['username'].toString(); // Set the specific field value
+      });
+    } catch (e) {
+      print('_loadDocData Error: $e');
     }
+  }
+
+  void showWelcomeBox() {
+    String uMode = '';
+    showDialog(
+      context: context,
+      builder: (context)  {
+        if(_currentUser != ''){
+          controller.text = _currentUser;
+          uMode = 'Update';
+        } else {
+          uMode = 'Add';
+        }
+        return AlertDialog(
+          title: Text(
+            "Welcome user $_currentUser",
+            style: GoogleFonts.alexandria(fontSize: 16),
+          ),
+          content: Column(
+            children: <Widget>[
+              TextField(
+                decoration: const InputDecoration(hintText: 'Username here...'),
+                style: GoogleFonts.alexandria(),
+                controller: controller,
+              ),
+              const SizedBox(height: 10), // Add space between text and TextField
+              Text(
+                _token,
+                style: GoogleFonts.alexandria(),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                if (_docId == '') {
+                  firestoreServices.addToken(controller.text, _token);
+                } else {
+                  firestoreServices.updateToken(_docId, controller.text, _token);
+                  _currentUser = _textToedit;
+                  print('showUserCreateBox updateToken: current user is $_currentUser');
+                }
+                controller.clear();
+                Navigator.pop(context);
+              },
+              child: Text(
+                uMode,
+                style: GoogleFonts.alexandria(),
+              ),
+            )
+          ],
+        );
+      },
+    );
+  }
 
   // This method is called to get the Firebase token
   Future<void> _getFirebaseMessagingToken() async {
@@ -108,7 +181,8 @@ class _MyHomePageState extends State<MyHomePage> {
       setState(() {
         _currentUser = currentUser;
       });
-      print('Fetching token: Your username is $currentUser'); 
+      print('Fetching token: Your username is $currentUser');
+      _loadDocData();
       // You can send this token to your server for push notifications
     } catch (e) {
       //print("Error getting token: $e");
@@ -211,7 +285,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 if (docId == null) {
                   firestoreServices.addToken(controller.text, _token);
                 } else {
-                  firestoreServices.updateToken(docId, controller.text, _token, time!);
+                  firestoreServices.updateToken(docId, controller.text, _token);
                   _currentUser = _textToedit;
                   print('showUserCreateBox updateToken: current user is $_currentUser');
                 }

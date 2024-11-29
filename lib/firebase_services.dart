@@ -73,6 +73,31 @@ class FirestoreServices {
     }
   }
 
+  // Fetch the first document from a Firestore collection
+  Future<Map<String, dynamic>> fetchTokenDocument(String token) async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('usertokens')
+        .where('token', isEqualTo: token) // Replace 'token' and passed token
+        .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        QueryDocumentSnapshot document = querySnapshot.docs.first;
+        return {
+          'docId': document.id,
+          //'fields': document.data(),
+          'username': document['username'],
+        };
+      } else {
+        print('No documents found in the collection');
+        return {};
+      }
+    } catch (e) {
+      print('Error fetching document: $e');
+      return {};
+    }
+  }
+
   // Fetch a list of items from Firestore collection
   //Future<List<String>?> fetchItems() async {
   Future<List<Map<String, dynamic>>> fetchItems() async {
@@ -93,8 +118,8 @@ class FirestoreServices {
   // update the data by accessing the particular
   // docId of the note which we want to update.
 
-  Future<void> updateToken(String docId, String newUsername, String newToken, Timestamp time) {
-    return usertokens!.doc(docId).update({'username': newUsername,'token': newToken, 'timestamp': time});
+  Future<void> updateToken(String docId, String newUsername, String newToken) {
+    return usertokens!.doc(docId).update({'username': newUsername,'token': newToken, 'timestamp': Timestamp.now()});
   }
 
   // delete the data by accessing the particular
