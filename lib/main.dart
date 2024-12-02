@@ -1,4 +1,5 @@
 import 'dart:convert'; //for json encode
+import 'dart:io';
 import 'package:_crudapp/firebase_options.dart';
 import 'package:_crudapp/firebase_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,6 +10,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 //import 'package:http/http.dart' as http; //for http post
 import 'package:googleapis_auth/auth_io.dart' as auth; //for Google API auth
+import 'package:image_picker/image_picker.dart';
+//import 'package:permission_handler/permission_handler.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,11 +84,17 @@ class _MyHomePageState extends State<MyHomePage> {
   bool _customTileExpanded = false;
   bool _customTileExpanded2 = false;
   bool _customTileExpanded3 = false;
+  bool _customTileExpanded4 = false;
   int _notificationCount = 0;
   String _currentUser = '';
   String _textToedit = '';
   String _docId = '';
-
+  List<File> _images = <File>[]; // List to store selected images.
+  File? _imagePhoto = null;
+  Uint8List? _imageBytes;
+  int _imgcnt = 0;
+  final ImagePicker picker = ImagePicker();
+  
   @override
   void initState() {
     super.initState();
@@ -490,6 +500,56 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Future<void> _pickImage() async {
+    // Request permission before picking an image on Android
+    //PermissionStatus status = await Permission.photos.request();
+
+    //if (status.isGranted) {
+
+      //final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image != null) {
+        String originalFilePath = image.path;
+        print('image path is $originalFilePath');
+        //final String _path = image.path;
+        //final String _normalizedPath = _path.replaceAllMapped(
+        //  RegExp(r'\.(PNG|JPG|JPEG)$', caseSensitive: true),
+        //  (match) => match.group(0)!.toLowerCase(),
+        //);
+        print('image is not null');
+        Uint8List? imageByte =  await image.readAsBytes();
+        //print('image bytes is $imageByte');
+        setState(() {
+          _imageBytes = imageByte;
+          _imgcnt=1;
+        });
+      }
+
+    //} else {
+      // Handle permission denied
+      //print("Permission denied to access photos.");
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Alert"),
+            content: const Text("Triggered Image Upload."),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
+    //}
+
+  }
+
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -811,6 +871,81 @@ class _MyHomePageState extends State<MyHomePage> {
                       );
                     }
                   },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20), // Adds space between the widgets
+            ExpansionTile(
+              title: const Text('User Image List'),
+              trailing: Icon(
+                _customTileExpanded4
+                    ? Icons.arrow_drop_down_circle
+                    : Icons.arrow_drop_down,
+              ),
+              onExpansionChanged: (bool expanded) {
+                //String currentUser = await firestoreServices.queryUsername(_token);
+                //print('My username is $currentUser');
+                setState(() {
+                  _customTileExpanded4 = expanded;
+                  //_currentUser = currentUser;
+                });
+              },
+              children: <Widget>[
+                SizedBox(
+                  height: 300,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3, // Number of columns in the grid.
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                      ),
+                      itemCount: _imgcnt + 1, // Add 1 for the "Add Image" button.
+                      itemBuilder: (context, index) {
+                        if (index == _imgcnt) {
+                          // Add Image button.
+                          //return GestureDetector(
+                          /*
+                          return InkWell(
+                            onTap: _pickImage,
+                            child: Container(
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.add_a_photo, 
+                              size: 40, color: Colors.black54),
+                            ),
+                          );
+                          */
+                          return ElevatedButton(
+                            onPressed: _pickImage,
+                            child: Container(
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.add_a_photo, 
+                              size: 40, color: Colors.black54),
+                            ),
+                          );
+                        } else {
+                          /*
+                          return CircleAvatar(
+                            radius: 0,
+                            backgroundImage: MemoryImage(_imageBytes!),
+                          );
+                          */
+                          // Display the selected image.                          
+                          return Container(
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                //image: FileImage(_images[index] as File),
+                                image: MemoryImage(_imageBytes!),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          );
+                          
+                        }
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
