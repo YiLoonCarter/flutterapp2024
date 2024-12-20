@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_proc.dart';
 import 'package:flutter/material.dart';
 import 'main.dart'; // Import HomePage to navigate back
-import 'package:cached_network_image/cached_network_image.dart';
+//import 'package:cached_network_image/cached_network_image.dart';
 
 //class AboutPage extends StatelessWidget {
 class AboutPage extends StatefulWidget {
@@ -26,6 +26,7 @@ class _AboutPageState extends State<AboutPage> {
     print('Display Name is $displayName');
   }
 
+  /*
   Future<void> _signOut(BuildContext context) async {
     try {
       // Sign out from Firebase
@@ -40,6 +41,7 @@ class _AboutPageState extends State<AboutPage> {
       );
     }
   }
+  */
 
   @override
   Widget build(BuildContext context) {

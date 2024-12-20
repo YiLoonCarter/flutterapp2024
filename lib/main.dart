@@ -1,8 +1,8 @@
 import 'dart:convert'; //for json encode
-import 'dart:io';
+//import 'dart:io';
 import 'package:_crudapp/firebase_options.dart';
 import 'package:_crudapp/firebase_services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+//import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -93,8 +93,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String _currentUser = '';
   String _textToedit = '';
   String _docId = '';
-  List<File> _images = <File>[]; // List to store selected images.
-  File? _imagePhoto = null;
+  //final List<File> _images = <File>[]; // List to store selected images.
+  //final File? _imagePhoto = null;
   Uint8List? _imageBytes;
   int _imgcnt = 0;
   final ImagePicker picker = ImagePicker();
@@ -573,6 +573,7 @@ class _MyHomePageState extends State<MyHomePage> {
     //}
   }
 
+  /*
   Future<void> _signOut(BuildContext context) async {
     try {
       // Sign out from Firebase
@@ -587,6 +588,7 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     }
   }
+  */
 
   @override
   Widget build(BuildContext context) {
