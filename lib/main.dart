@@ -645,6 +645,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
             ],
           ),
+          /*
           if (photoURL != null) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -688,6 +689,7 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
           ]
+          */
         ],
       ),
       drawer: Drawer(
@@ -723,6 +725,31 @@ class _MyHomePageState extends State<MyHomePage> {
                   MaterialPageRoute(builder: (context) => AboutPage()),
                 );
               },
+            ),
+            ListTile(
+              title: Text(
+                displayName ?? 'User',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: () async {
+                  try {
+                    await FirebaseAuth.instance.signOut();
+                    // Navigate to the AuthGate after signing out
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AuthGate()),
+                    );
+                  } catch (e) {
+                    print('Error signing out: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error signing out. Try again.')),
+                    );
+                  }
+                },
+                //child: const Text('Sign Out'),
+              ),
             ),
           ],
         ),

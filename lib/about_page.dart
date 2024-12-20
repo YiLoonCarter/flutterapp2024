@@ -23,6 +23,7 @@ class _AboutPageState extends State<AboutPage> {
     photoURL = user?.photoURL;
     displayName = user?.displayName;
     //print('Photo URL is $photoURL');
+    print('Display Name is $displayName');
   }
 
   Future<void> _signOut(BuildContext context) async {
@@ -46,8 +47,9 @@ class _AboutPageState extends State<AboutPage> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text("About Page"),
+        /*
         actions: [
-          if (photoURL != null) ...[
+          if (displayName != null) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: CircleAvatar(
@@ -64,6 +66,7 @@ class _AboutPageState extends State<AboutPage> {
                 ),
               ),
             ),
+
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Center(
@@ -91,9 +94,10 @@ class _AboutPageState extends State<AboutPage> {
             ),
           ]
         ],
+        */
       ),
       drawer: Drawer(
-        width: 250,
+        width: 300,
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
@@ -129,13 +133,38 @@ class _AboutPageState extends State<AboutPage> {
                 Navigator.pop(context); // Close the drawer
               },
             ),
+            ListTile(
+              title: Text(
+                displayName ?? 'User',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.logout),
+                onPressed: () async {
+                  try {
+                    await FirebaseAuth.instance.signOut();
+                    // Navigate to the AuthGate after signing out
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AuthGate()),
+                    );
+                  } catch (e) {
+                    print('Error signing out: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error signing out. Try again.')),
+                    );
+                  }
+                },
+                //child: const Text('Sign Out'),
+              ),
+            ),
           ],
         ),
       ),
-      body: const Center(
+      body: Center(
         child: Text(
-          'Welcome to the About Page!',
-          style: TextStyle(fontSize: 18),
+          'Welcome to the About Page! $displayName',
+          style: const TextStyle(fontSize: 18),
         ),
       ),
     );
